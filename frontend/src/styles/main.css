@@ -1,0 +1,510 @@
+/* Using system font (Agency FB) - no external imports */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Agency FB', Arial, sans-serif;
+    font-weight: 700;
+    background: #000000;
+    color: #ffffff;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 30px 0;
+}
+
+header h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #FFD700;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+header p {
+    font-size: 1.2rem;
+    color: #ffffff;
+    font-weight: 400;
+}
+
+p {
+    color: #ffffff;
+    line-height: 1.6;
+    margin-bottom: 15px;
+    font-family: 'Agency FB', Arial, sans-serif;
+    font-weight: 400;
+}
+
+#wallet-section {
+    margin-top: 20px;
+}
+
+#wallet-info {
+    margin-top: 15px;
+    padding: 15px;
+    background: #000000;
+    border: 2px solid #FFD700;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+#wallet-address {
+    color: #FFD700;
+    font-family: 'Agency FB', Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* Buttons */
+.btn {
+    padding: 15px 30px;
+    border: 2px solid #FFD700;
+    background: #000000;
+    color: #FFD700;
+    font-family: 'Agency FB', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+    border-radius: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn:hover,
+.btn:active {
+    background: #FFD700;
+    color: #000000;
+}
+
+.btn-primary {
+    border-color: #FFD700;
+}
+
+.btn-secondary {
+    border-color: #FFD700;
+    color: #ffffff;
+    background: #000000;
+}
+
+.btn-secondary:hover {
+    background: #111111;
+    color: #ffffff;
+}
+
+.btn-danger {
+    border-color: #ff4444;
+    color: #ffffff;
+    background: #000000;
+}
+
+.btn-danger:hover {
+    background: #111111;
+    color: #ffffff;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    background: #000000;
+    border: 2px solid #FFD700;
+    border-radius: 0;
+    padding: 0;
+}
+
+.tab-btn {
+    padding: 15px 30px;
+    background: transparent;
+    border: none;
+    color: #FFD700;
+    font-family: 'Agency FB', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    border-radius: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-right: 1px solid #FFD700;
+}
+
+.tab-btn:last-child {
+    border-right: none;
+}
+
+.tab-btn.active {
+    color: #000000;
+    background: #FFD700;
+}
+
+.tab-btn:hover:not(.active) {
+    background: #111111;
+    color: #FFD700;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    background: #000000;
+    border-radius: 0;
+    /* padding: 30px; */
+    /* border: 2px solid #FFD700; */
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Cards */
+.card {
+    background: #000000;
+    border: 2px solid #FFD700;
+    border-radius: 0;
+    padding: 30px;
+    position: relative;
+    overflow: hidden; 
+}
+
+.card h2 {
+    color: #FFD700;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+h2, h3, h4, h5, h6 {
+    color: #FFD700;
+    margin-bottom: 15px;
+    font-weight: 700;
+    font-family: 'Agency FB', Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: #ffffff;
+    font-weight: normal;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.form-group small {
+    color: #ffffff;
+    font-size: 0.8rem;
+    margin-top: 5px;
+    display: block;
+}
+
+.radio-group input[type="radio"] {
+    margin: 0;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 15px;
+    background: #000000;
+    border: 2px solid #FFD700;
+    border-radius: 0;
+    color: #ffffff;
+    font-family: 'Agency FB', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #FFD700;
+    background: #111111;
+}
+
+.form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* Results */
+.result,
+.results {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 0;
+    border: 2px solid #FFD700;
+    background: #000000;
+}
+
+.result.success {
+    border-color: #FFD700;
+    background: #000000;
+}
+
+.result.error {
+    border-color: #FFD700;
+    background: #000000;
+}
+
+.result h4 {
+    color: #FFD700;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.result.success h4,
+.result.error h4 {
+    color: #ffffff;
+}
+
+.search-result {
+    background: #000000;
+    border: 2px solid #FFD700;
+    border-radius: 0;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-left: 4px solid #FFD700;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.search-result:hover {
+    background: #111111;
+}
+
+.search-result h4 {
+    color: #FFD700;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.search-result .score {
+    color: #FFD700;
+    font-weight: 700;
+    float: right;
+}
+
+.search-result .content {
+    color: #ffffff;
+    line-height: 1.5;
+}
+
+.search-result .metadata {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: #ffffff;
+    font-family: 'Agency FB', Arial, sans-serif;
+}
+
+/* Stats */
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    background: #000000;
+    padding: 20px;
+    border-radius: 0;
+    border: 2px solid #FFD700;
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    color: #ffffff;
+    font-size: 1rem;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Agency FB', Arial, sans-serif;
+    font-weight: 700;
+}
+
+.stat-item span:last-child {
+    color: #FFD700;
+    font-size: 2.5rem;
+    font-weight: 700;
+    font-family: 'Agency FB', Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+/* Actions */
+.actions {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+/* Loading */
+.hidden { display: none !important; }
+
+.loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #333333;
+    border-top: 3px solid #FFD700;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading p {
+    color: #ffffff;
+    font-size: 1.2rem;
+    font-weight: normal;
+}
+
+/* Notification */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    background: #000000;
+    border: 2px solid #FFD700;
+    border-radius: 0;
+    color: #ffffff;
+    font-weight: 700;
+    z-index: 1001;
+}
+
+.notification.success {
+    background: #000000;
+    border-color: #FFD700;
+}
+
+.notification.error {
+    background: #000000;
+    border-color: #FFD700;
+}
+
+.notification.info {
+    background: #000000;
+    border-color: #FFD700;
+}
+
+/* No extra animations */
+/* deleted @keyframes glitch and slideIn */
+/* removed header h1:hover animation */
+
+code {
+    background: #000000;
+    color: #FFD700;
+    padding: 4px 8px;
+    border-radius: 0;
+    font-family: 'Agency FB', Arial, sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    border: 1px solid #FFD700;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    header h1 {
+        font-size: 2.5rem;
+        letter-spacing: 2px;
+    }
+    
+    .tabs {
+        flex-direction: column;
+    }
+    
+    .tab-btn {
+        padding: 10px 20px;
+    }
+    
+    .actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .stats {
+        grid-template-columns: 1fr;
+    }
+    
+    #wallet-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+.result.success {
+    border-color: #00ffcc;
+    background: #00ffcc33;
+}
+
+.result.success * {
+    color: #00ffcc;
+    border-color: #00ffcc;
+}
+
+.result.error {
+    border-color: #ff0000;
+    background: #ff000033;
+}
+
+.result.error * {
+    color: #ff0000;
+    border-color: #ff0000;
+}

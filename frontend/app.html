@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VECTURE — Decentralized Vector Storage & Search</title>
+    <link rel="stylesheet" href="src/styles/main.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>VECTURE</h1>
+            <p>Decentralized Vector Storage & Search</p>
+            <div id="wallet-section">
+                <button id="connect-wallet" class="btn btn-primary">Connect Wallet</button>
+                <div id="wallet-info" class="hidden">
+                    <span id="wallet-address"></span>
+                    <button id="disconnect-wallet" class="btn btn-secondary">Disconnect</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="upload">Vectorize Content</button>
+                <button class="tab-btn" data-tab="search">Search Vectors</button>
+                <button class="tab-btn" data-tab="manage">Manage Index</button>
+            </div>
+
+            <!-- Upload Tab -->
+            <div id="upload-tab" class="tab-content active">
+                <div class="card">
+                    <h2>Embed Your Content</h2>
+                    <form id="upload-form">
+                        <div class="form-group">
+                            <label for="url-input">Source:</label>
+                            <input type="url" id="url-input" placeholder="https://somepaper.site/article" required>
+                            <small>Enter a URL to extract content and mint as NFT</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Extract Content & Mint NFT</button>
+                    </form>
+                    <div id="upload-result" class="result hidden"></div>
+                </div>
+            </div>
+
+            <!-- Search Tab -->
+            <div id="search-tab" class="tab-content">
+                <div class="card">
+                    <h2>Search Similar Vectors</h2>
+                    <form id="search-form">
+                        <div class="form-group">
+                            <label for="search-input">Search Query:</label>
+                            <input type="text" id="search-input" placeholder="Enter search query..." required>
+                        </div>
+                        <div class="form-group">
+                            <label for="top-k">Number of Results:</label>
+                            <input type="number" id="top-k" value="5" min="1" max="20">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Search</button>
+                    </form>
+                    <div id="search-results" class="results"></div>
+                </div>
+            </div>
+
+            <!-- Manage Tab -->
+            <div id="manage-tab" class="tab-content">
+                <div class="card">
+                    <h2>Index Management</h2>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Vectors:</span>
+                            <span id="total-vectors">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Index Size:</span>
+                            <span id="index-size">-</span>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button id="refresh-stats" class="btn btn-secondary">Refresh Stats</button>
+                        <button id="clear-index" class="btn btn-danger">Clear Index</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p>Processing...</p>
+    </div>
+
+    <div id="notification" class="notification hidden"></div>
+
+    <!-- Ethers.js library for Ethereum interactions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    
+    <!-- Contract configuration -->
+    <script>
+        // Contract configuration
+        const CONTRACT_ADDRESS = '0x3129dd4d0454e94fcc98c7880a730038fd325063';
+        const CONTRACT_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "bytes32", "name": "contentHash", "type": "bytes32"},
+                    {"internalType": "bytes32", "name": "vectorHash", "type": "bytes32"},
+                    {"internalType": "string", "name": "manifestCID", "type": "string"},
+                    {"internalType": "string", "name": "sourceUrl", "type": "string"}
+                ],
+                "name": "mint",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+        
+        // Sepolia testnet configuration
+        const SEPOLIA_CHAIN_ID = 11155111;
+        const SEPOLIA_RPC_URL = 'https://sepolia.infura.io/v3/test';
+    </script>
+    
+    <script src="src/lib/web3.js"></script>
+    <script src="src/lib/api.js"></script>
+    <script src="src/app.js"></script>
+</body>
+</html>

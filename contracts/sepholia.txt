@@ -1,0 +1,43 @@
+creation of vecture_01 pending...
+view on Etherscan view on Blockscout
+[block:9146020 txIndex:18]from: 0xb90...3390ato: vecture_01.(constructor)value: 0 weidata: 0x608...e0033logs: 1hash: 0xe2f...3c274
+status	0x1 Transaction mined and execution succeed
+transaction hash	0x7aa0f2893539bcbfecd739d4f280666f112acf8161e19ca894fb0b45389783bd
+block hash	0xe2fab0ca1a96907099d1c70608f78f57c59ba492c8b9697bcd8a2c62da63c274
+block number	9146020
+contract address	0x3129dd4d0454e94fcc98c7880a730038fd325063
+from	0xb900bf1B510B3e4b917681aA601FFE9eF053390A
+to	vecture_01.(constructor)
+gas	2610605 gas
+transaction cost	2588891 gas 
+input	0x608...e0033
+decoded input	{}
+decoded output	 - 
+logs	[
+	{
+		"from": "0x3129dd4d0454e94fcc98c7880a730038fd325063",
+		"topic": "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
+		"event": "OwnershipTransferred",
+		"args": {
+			"0": "0x0000000000000000000000000000000000000000",
+			"1": "0xb900bf1B510B3e4b917681aA601FFE9eF053390A"
+		}
+	}
+]
+raw logs	[
+  {
+    "address": "0x3129dd4d0454e94fcc98c7880a730038fd325063",
+    "blockHash": "0xe2fab0ca1a96907099d1c70608f78f57c59ba492c8b9697bcd8a2c62da63c274",
+    "blockNumber": "0x8b8ea4",
+    "data": "0x",
+    "logIndex": "0x38",
+    "removed": false,
+    "topics": [
+      "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x000000000000000000000000b900bf1b510b3e4b917681aa601ffe9ef053390a"
+    ],
+    "transactionHash": "0x7aa0f2893539bcbfecd739d4f280666f112acf8161e19ca894fb0b45389783bd",
+    "transactionIndex": "0x12"
+  }
+]
