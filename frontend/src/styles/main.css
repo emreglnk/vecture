@@ -325,6 +325,55 @@ h2, h3, h4, h5, h6 {
     font-family: 'Agency FB', Arial, sans-serif;
 }
 
+/* Vector Visualization */
+.render-image {
+    text-align: center;
+    margin: 15px 0;
+    padding: 10px;
+    background: #111111;
+    border: 1px solid #FFD700;
+    border-radius: 8px;
+}
+
+.render-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    border: 2px solid #FFD700;
+    box-shadow: 0 4px 8px rgba(255, 215, 0, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.render-image img:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(255, 215, 0, 0.3);
+}
+
+/* Search result specific render image styling */
+.search-result .render-image {
+    margin: 10px 0;
+    padding: 8px;
+    background: #0a0a0a;
+}
+
+.search-result .render-image img {
+    max-height: 500px;
+    width: 100%;
+    border: 1px solid #FFD700;
+}
+
+/* Upload result specific render image styling */
+.result.success .render-image {
+    margin: 20px 0;
+    padding: 15px;
+    background: #0f0f0f;
+}
+
+.result.success .render-image img {
+    max-width: 300px;
+    border: 2px solid #4CAF50;
+}
+
 /* Stats */
 .stats {
     display: grid;

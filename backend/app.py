@@ -10,13 +10,16 @@ from typing import Optional, List, Dict, Any
 
 import numpy as np
 import requests
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 import re
 import asyncio
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 # from rag_pipeline import get_vector_index
 from openai import OpenAI
@@ -343,6 +346,38 @@ class FetchUrlResponse(BaseModel):
     author: str = Field(default="", description="Page author from meta tags")
     keywords: List[str] = Field(default_factory=list, description="Page keywords from meta tags")
 
+# Render function for vector visualization
+def render_dot_image(vec: np.ndarray, label: str = "") -> io.BytesIO:
+    """Render a 1536-dimensional vector as a dot visualization"""
+    if vec.size != 1536:
+        raise ValueError("Vector length must be 1536.")
+    mat = vec.reshape(32, 48)
+
+    vals = mat.astype(float)
+    vals = np.clip(vals, np.percentile(vals, 1), np.percentile(vals, 99))
+    norm = (vals - vals.min()) / (vals.max() - vals.min())
+    sizes = 0 + norm * (200 - 10) * .3
+
+    yy, xx = np.indices((32, 48))
+    x = xx.ravel()
+    y = yy.ravel()
+    s = sizes.ravel()
+
+    fig, ax = plt.subplots(figsize=(6, 4), facecolor="black")
+    ax.set_facecolor("black")
+    ax.scatter(x, y, s=s, c="#FFD400", edgecolors="none")
+    ax.set_xlim(-0.5, 47.5)
+    ax.set_ylim(31.5, -0.5)
+    ax.axis("off")
+    fig.subplots_adjust(bottom=0.12)
+    fig.text(0.5, 0.04, label, color="white", ha="center", va="center", fontsize=12)
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format="jpeg", dpi=200, bbox_inches="tight", pad_inches=0.2, facecolor="black", transparent=False)
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
 # API endpoints
 @app.get("/")
 async def root():
@@ -523,7 +558,7 @@ async def add_to_index(request: AddIndexRequest):
     
     try:
         # Download embedding from IPFS
-        ipfs_url = request.embedding_uri.replace("ipfs://", "https://ipfs.io/ipfs/")
+        ipfs_url = request.embedding_uri.replace("ipfs://", "https://plum-peculiar-pheasant-309.mypinata.cloud/ipfs/")
         
         logger.info(f"Downloading embedding from: {ipfs_url}")
         
@@ -752,6 +787,43 @@ async def startup_autoload_nfts():
             logger.error(f"Startup: Route introspection failed: {e}")
     except Exception as e:
         logger.error(f"Startup: Auto-loading failed: {e}")
+
+@app.get("/render")
+def render_from_url(url: str = Query(...), label: str = Query("")):
+    """Render a vector visualization from a .npy file URL"""
+    try:
+        # replace ipfs:// with https://plum-peculiar-pheasant-309.mypinata.cloud/ipfs/
+        url = url.replace("ipfs://","https://plum-peculiar-pheasant-309.mypinata.cloud/ipfs/")
+        r = requests.get(url)
+        r.raise_for_status()
+        arr = np.load(io.BytesIO(r.content))
+
+        if arr.ndim == 1:
+            vec = arr
+        elif arr.ndim == 2 and arr.shape[1] == 1536:
+            vec = arr[0]
+        else:
+            return {"error": "Invalid .npy format. Must be a 1536-length vector or (N, 1536)."}
+
+        img_buf = render_dot_image(vec, label)
+        return Response(content=img_buf.read(), media_type="image/jpeg")
+
+    except Exception as e:
+        logger.error(f"Render error: {e}")
+        return {"error": str(e)}
+
+@app.post("/render_vector")
+def render_vector_direct(vector: List[float], label: str = ""):
+    """Render vector visualization from direct vector input"""
+    try:
+        vec = np.array(vector)
+        if vec.size != 1536:
+            return {"error": "Vector length must be 1536."}
+        
+        img_buf = render_dot_image(vec, label)
+        return Response(content=img_buf.read(), media_type="image/jpeg")
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn

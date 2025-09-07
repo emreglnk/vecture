@@ -133,3 +133,6 @@ flowchart LR
 
   class U,M,EMB,HASH,IPFS,NFT,IDX,ANN,RAG mvp
   class SPLIT,WIKI,MED,GIT,VER fut
+
+Sepholia Contract Addr: 0x3129dd4d0454e94fcc98c7880a730038fd325063
+Rise Contract Addr: 0x3129DD4d0454E94fcC98C7880A730038fD325063 ???

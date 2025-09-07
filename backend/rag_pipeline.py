@@ -88,6 +88,13 @@ class VectorIndex:
             # Add metadata if available
             if token_id in self.metadata:
                 hit["metadata"] = self.metadata[token_id]
+                # Ensure embedding_uri is available for frontend rendering
+                if "embedding" in self.metadata[token_id] and "file" in self.metadata[token_id]["embedding"] and "uri" in self.metadata[token_id]["embedding"]["file"]:
+                    hit["metadata"]["embedding_uri"] = self.metadata[token_id]["embedding"]["file"]["uri"]
+                elif "properties" in self.metadata[token_id] and "embeddingURI" in self.metadata[token_id]["properties"]:
+                    hit["metadata"]["embedding_uri"] = self.metadata[token_id]["properties"]["embeddingURI"]
+                elif "embeddingURI" in self.metadata[token_id]:
+                    hit["metadata"]["embedding_uri"] = self.metadata[token_id]["embeddingURI"]
                 
             hits.append(hit)
             

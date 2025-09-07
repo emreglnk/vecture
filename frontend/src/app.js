@@ -135,28 +135,31 @@ class VectorMVPApp {
 
     async fetchContentFromUrl(url) {
         try {
-            const response = await fetch(`http://localhost:8000/fetch_url`, {
+            // Use backend /fetch_url endpoint to properly extract content
+            const response = await fetch('http://localhost:8000/fetch_url', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ url })
+                body: JSON.stringify({ url: url })
             });
-
+            
             if (!response.ok) {
-                throw new Error(`Failed to fetch content: ${response.statusText}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `Failed to fetch content: ${response.statusText}`);
             }
-
+            
             const data = await response.json();
+            
             return {
+                title: data.title || 'Extracted Content',
                 content: data.content,
-                title: data.title,
                 description: data.description || '',
                 author: data.author || '',
                 keywords: data.keywords || []
             };
         } catch (error) {
-            throw new Error(`URL fetch failed: ${error.message}`);
+            throw new Error(`Content extraction failed: ${error.message}`);
         }
     }
 
@@ -263,10 +266,15 @@ class VectorMVPApp {
                 }
             } catch (_) {}
 
+            // Generate render image URL if vector_url is available
+            const renderImageUrl = uploadResult.vector_url ? 
+                `http://localhost:8000/render?url=${encodeURIComponent(uploadResult.vector_url)}&label=Token ${tokenId || 'New'}` : null;
+            
             // Show success result
             resultDiv.innerHTML = `
                 <div class="result success">
                     <h4>Content Uploaded & NFT Minted Successfully!</h4>
+                    ${renderImageUrl ? `<div class="render-image" style="text-align: center; margin: 15px 0;"><img src="${renderImageUrl}" alt="Vector Visualization" style="max-width: 300px; height: auto; border-radius: 0px; border: 2px solid #4CAF50;"></div>` : ''}
                     <p><strong>Transaction Hash:</strong> <code>${txHash}</code></p>
                     ${tokenId ? `<p><strong>Token ID:</strong> ${tokenId}</p>` : ''}
                     <p><strong>Content Hash:</strong> <code>${uploadResult.contentHash}</code></p>
@@ -336,6 +344,10 @@ class VectorMVPApp {
                 let html = `<h3>Found ${data.hits.length} results:</h3>`;
                 data.hits.forEach((hit, index) => {
                     const similarity = (hit.score * 100).toFixed(1);
+                    // Generate render image URL for this NFT using embedding_uri from metadata
+                    const renderImageUrl = hit.metadata && hit.metadata.embedding_uri ? 
+                        `http://localhost:8000/render?url=${encodeURIComponent(hit.metadata.embedding_uri)}&label=Token ${hit.tokenId}` : null;
+                    
                     html += `
                         <div class="search-result">
                             <div class="result-header">
@@ -343,6 +355,7 @@ class VectorMVPApp {
                                 <span class="result-score">${similarity}% match</span>
                             </div>
                             <div class="result-content">
+                                ${renderImageUrl ? `<div class="render-image"><img src="${renderImageUrl}" alt="Vector Visualization" style=""></div>` : ''}
                                 <strong>Token ID:</strong> ${hit.tokenId}<br>
                                 <strong>Chunk ID:</strong> ${hit.chunkId}<br>
                                 ${hit.metadata ? `<strong>Title:</strong> ${hit.metadata.title || 'N/A'}<br>` : ''}
@@ -550,15 +563,41 @@ class VectorMVPApp {
             
             const result = await response.json();
             
-            ragOutput.innerHTML = `
+            let html = `
                 <div class="rag-result">
                     <h3>AI Response:</h3>
                     <div class="answer">${result.answer}</div>
                     <div class="context-info">
                         <small>Based on ${result.context_sources || 'multiple'} relevant sources</small>
                     </div>
-                </div>
             `;
+            
+            // Display context sources with vector visualizations
+            if (result.hits && result.hits.length > 0) {
+                html += '<div class="context-sources"><h5>Context Sources:</h5>';
+                result.hits.forEach((hit, index) => {
+                    const metadata = hit.metadata || {};
+                    const score = (hit.score * 100).toFixed(1);
+                    
+                    // Generate render image URL if embedding_uri is available
+                    const renderImageUrl = metadata.embedding_uri ? 
+                        `http://localhost:8000/render?url=${encodeURIComponent(metadata.embedding_uri)}&label=Source ${index + 1}` : null;
+                    
+                    html += `
+                        <div class="context-item">
+                            <strong>Source ${index + 1}</strong> (${score}% relevance)<br>
+                            ${renderImageUrl ? `<div class="render-image" style="text-align: center; margin: 8px 0;"><img src="${renderImageUrl}" alt="Vector Visualization" style="max-width: 150px; height: auto; border-radius: 0px; border: 1px solid #FFD700;"></div>` : ''}
+                            <em>${metadata.title || 'Untitled'}</em><br>
+                            ${hit.text ? hit.text.substring(0, 150) + '...' : 'No preview available'}
+                            ${metadata.source_url ? `<br><a href="${metadata.source_url}" target="_blank">View Source</a>` : ''}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            ragOutput.innerHTML = html;
             ragOutput.classList.remove('hidden');
             
         } catch (error) {
