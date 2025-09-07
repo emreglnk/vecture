@@ -68,6 +68,7 @@ The goal: make knowledge **verifiable on-chain**, provide **transparent sources 
 **Vecture** aims to become a **verifiable, sustainable alternative to web search for LLMs**, while building a global knowledge economy where **creators are rewarded fairly**.
 
 Sepholia Contract Addr: 0x3129dd4d0454e94fcc98c7880a730038fd325063
+
 Rise Contract Addr: 0xD93eB0baf8E6b91C6882D89C5Bbf368649140aC4
 
 ---
