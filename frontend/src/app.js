@@ -274,7 +274,7 @@ class VectorMVPApp {
             resultDiv.innerHTML = `
                 <div class="result success">
                     <h4>Content Uploaded & NFT Minted Successfully!</h4>
-                    ${renderImageUrl ? `<div class="render-image" style="text-align: center; margin: 15px 0;"><img src="${renderImageUrl}" alt="Vector Visualization" style="max-width: 300px; height: auto; border-radius: 0px; border: 2px solid #4CAF50;"></div>` : ''}
+                    ${renderImageUrl ? `<div class="render-image" style="text-align: center; margin: 15px 0;"><div class="image-placeholder" data-upload-id="upload-result" style="min-height: 200px; display: flex; align-items: center; justify-content: center; background: transparent; color: #4CAF50; font-size: 14px; margin: 15px 0;">Resim yükleniyor...</div></div>` : ''}
                     <p><strong>Transaction Hash:</strong> <code>${txHash}</code></p>
                     ${tokenId ? `<p><strong>Token ID:</strong> ${tokenId}</p>` : ''}
                     <p><strong>Content Hash:</strong> <code>${uploadResult.contentHash}</code></p>
@@ -285,6 +285,13 @@ class VectorMVPApp {
                 </div>
             `;
             resultDiv.classList.remove('hidden');
+            
+            // Load upload result image with delay
+            if (renderImageUrl) {
+                setTimeout(() => {
+                    this.loadUploadImageWithDelay(renderImageUrl);
+                }, 1000);
+            }
             
             // Clear form
             urlInput.value = '';
@@ -341,7 +348,9 @@ class VectorMVPApp {
             
             // Display results
             if (data.hits && data.hits.length > 0) {
-                let html = `<h3>Found ${data.hits.length} results:</h3>`;
+                let html = `<h3>Found ${data.hits.length} results:</h3><div class="search-results-grid">`;
+                const delayedImages = [];
+                
                 data.hits.forEach((hit, index) => {
                     const similarity = (hit.score * 100).toFixed(1);
                     // Generate render image URL for this NFT using embedding_uri from metadata
@@ -350,21 +359,36 @@ class VectorMVPApp {
                     
                     html += `
                         <div class="search-result">
-                            <div class="result-header">
-                                <span class="result-rank">#${hit.rank}</span>
-                                <span class="result-score">${similarity}% match</span>
-                            </div>
+                            ${renderImageUrl ? `
+                                <div class="result-image-container">
+                                    <div class="image-placeholder" data-rank="${hit.rank}" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: transparent; color: #FFD700; font-size: 14px;">Generating Matrix...</div>
+                                </div>
+                            ` : ''}
                             <div class="result-content">
-                                ${renderImageUrl ? `<div class="render-image"><img src="${renderImageUrl}" alt="Vector Visualization" style=""></div>` : ''}
-                                <strong>Token ID:</strong> ${hit.tokenId}<br>
-                                <strong>Chunk ID:</strong> ${hit.chunkId}<br>
-                                ${hit.metadata ? `<strong>Title:</strong> ${hit.metadata.title || 'N/A'}<br>` : ''}
-                                ${hit.metadata && hit.metadata.source_url ? `<strong>Source:</strong> <a href="${hit.metadata.source_url}" target="_blank">${hit.metadata.source_url}</a>` : ''}
+                                <div class="result-header">
+                                    <span class="result-rank">#${hit.rank}</span>
+                                    <span class="result-score">${similarity}% match</span>
+                                </div>
+                                <div class="result-info">
+                                    <strong>Token ID:</strong> ${hit.tokenId}<br>
+                                    <strong>Chunk ID:</strong> ${hit.chunkId}<br>
+                                    ${hit.metadata ? `<strong>Title:</strong> ${hit.metadata.title || 'N/A'}<br>` : ''}
+                                    ${hit.metadata && hit.metadata.source_url ? `<strong>Source:</strong> <a href="${hit.metadata.source_url}" target="_blank">${hit.metadata.source_url}</a>` : ''}
+                                </div>
                             </div>
                         </div>
                     `;
+                    
+                    // Store render URL for delayed loading
+                    if (renderImageUrl) {
+                        delayedImages.push({ url: renderImageUrl, rank: hit.rank });
+                    }
                 });
+                html += '</div>';
                 resultsDiv.innerHTML = html;
+                
+                // Load images with delay
+                this.loadImagesWithDelay(delayedImages);
             } else {
                 resultsDiv.innerHTML = '<p>No results found. Try a different query.</p>';
             }
@@ -575,6 +599,8 @@ class VectorMVPApp {
             // Display context sources with vector visualizations
             if (result.hits && result.hits.length > 0) {
                 html += '<div class="context-sources"><h5>Context Sources:</h5>';
+                const ragDelayedImages = [];
+                
                 result.hits.forEach((hit, index) => {
                     const metadata = hit.metadata || {};
                     const score = (hit.score * 100).toFixed(1);
@@ -586,14 +612,24 @@ class VectorMVPApp {
                     html += `
                         <div class="context-item">
                             <strong>Source ${index + 1}</strong> (${score}% relevance)<br>
-                            ${renderImageUrl ? `<div class="render-image" style="text-align: center; margin: 8px 0;"><img src="${renderImageUrl}" alt="Vector Visualization" style="max-width: 150px; height: auto; border-radius: 0px; border: 1px solid #FFD700;"></div>` : ''}
+                            ${renderImageUrl ? `<div class="render-image" style="text-align: center; margin: 8px 0;"><div class="image-placeholder" data-rag-index="${index}" style="min-height: 100px; display: flex; align-items: center; justify-content: center; background: transparent; color: #FFD700; font-size: 14px; margin: 8px 0;">Resim yükleniyor...</div></div>` : ''}
                             <em>${metadata.title || 'Untitled'}</em><br>
                             ${hit.text ? hit.text.substring(0, 150) + '...' : 'No preview available'}
                             ${metadata.source_url ? `<br><a href="${metadata.source_url}" target="_blank">View Source</a>` : ''}
                         </div>
                     `;
+                    
+                    // Store render URL for delayed loading
+                    if (renderImageUrl) {
+                        ragDelayedImages.push({ url: renderImageUrl, index: index });
+                    }
                 });
                 html += '</div>';
+                
+                // Load RAG images with delay after setting HTML
+                setTimeout(() => {
+                    this.loadRAGImagesWithDelay(ragDelayedImages);
+                }, 100);
             }
             
             html += '</div>';
@@ -780,6 +816,56 @@ class VectorMVPApp {
             notification.classList.add('hidden');
         }, 5000);
     }
+    
+    loadImagesWithDelay(delayedImages) {
+          delayedImages.forEach((imageData, index) => {
+              setTimeout(() => {
+                  const placeholder = document.querySelector(`[data-rank="${imageData.rank}"]`);
+                  if (placeholder) {
+                      const img = new Image();
+                      img.onload = () => {
+                          placeholder.innerHTML = `<img src="${imageData.url}" alt="Vector Visualization" style="width: 100%; height: 100%; object-fit: cover;">`;
+                      };
+                      img.onerror = () => {
+                          placeholder.innerHTML = '<div style="color: #ff6b6b; text-align: center;">Resim yüklenemedi</div>';
+                      };
+                      img.src = imageData.url;
+                  }
+              }, index * 300); // 300ms delay between each image
+          });
+      }
+     
+     loadRAGImagesWithDelay(delayedImages) {
+         delayedImages.forEach((imageData, index) => {
+             setTimeout(() => {
+                 const placeholder = document.querySelector(`[data-rag-index="${imageData.index}"]`);
+                 if (placeholder) {
+                     const img = new Image();
+                     img.onload = () => {
+                         placeholder.innerHTML = `<img src="${imageData.url}" alt="Vector Visualization" style="max-width: 150px; height: auto; border-radius: 0px; border: 1px solid #FFD700;">`;
+                     };
+                     img.onerror = () => {
+                         placeholder.innerHTML = 'Resim yüklenemedi';
+                     };
+                     img.src = imageData.url;
+                 }
+             }, index * 500); // 500ms delay between each image
+         });
+     }
+     
+     loadUploadImageWithDelay(renderImageUrl) {
+         const placeholder = document.querySelector('[data-upload-id="upload-result"]');
+         if (placeholder) {
+             const img = new Image();
+             img.onload = () => {
+                 placeholder.innerHTML = `<img src="${renderImageUrl}" alt="Vector Visualization" style="max-width: 200px; height: auto; border-radius: 0px; border: 1px solid #4CAF50;">`;
+             };
+             img.onerror = () => {
+                 placeholder.innerHTML = 'Resim yüklenemedi';
+             };
+             img.src = renderImageUrl;
+         }
+     }
 }
 
 // Initialize the application when DOM is loaded

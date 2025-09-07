@@ -1,30 +1,12 @@
-call to vecture_01.nextId
-call
-[call]from: 0xb900bf1B510B3e4b917681aA601FFE9eF053390Ato: vecture_01.nextId()data: 0x61b...8ce8c
-from	0xb900bf1B510B3e4b917681aA601FFE9eF053390A
-to	vecture_01.nextId() 0x3129DD4d0454E94fcC98C7880A730038fD325063
-input	0x61b...8ce8c
-output	00000000000000000000000000000005
-decoded input	{}
-decoded output	{
-	"0": "uint256: 5"
-}
-logs	[]
-raw logs	[]
-creation of vecture_01 pending...
-creation of vecture_01 errored: Error occurred:  [object Object].
-
- [object Object]
-
-If the transaction failed for not having enough gas, try increasing the gas limit gently.
+Type the library name to see available commands.
 creation of vecture_01 pending...
 view on Blockscout
-[block:22127593 txIndex:3]from: 0xb90...3390ato: vecture_01.(constructor)value: 0 weidata: 0x608...e0033logs: 1hash: 0x3a0...043d4
+[block:22140922 txIndex:22]from: 0xb90...3390ato: vecture_01.(constructor)value: 0 weidata: 0x608...e0033logs: 1hash: 0x97c...d5e39
 status	0x1 Transaction mined and execution succeed
-transaction hash	0xa098032f99073eee6d70f1c8ca70647ec20027d95923055604f33dd3d3268f34
-block hash	0x3a083b35989fb041da875593797d0fae026eeed8854461733e012ee2665043d4
-block number	22127593
-contract address	0x3129dd4d0454e94fcc98c7880a730038fd325063
+transaction hash	0xced5e016411e2ad5035b207dcf6f08154cb6df671882b0f0225e2fe19b103c31
+block hash	0x97cd8b0b170beb74815a0985216ce038cd84b802c75ac69e0c5c48b04f7d5e39
+block number	22140922
+contract address	0xd93eb0baf8e6b91c6882d89c5bbf368649140ac4
 from	0xb900bf1B510B3e4b917681aA601FFE9eF053390A
 to	vecture_01.(constructor)
 gas	2610605 gas
@@ -34,7 +16,7 @@ decoded input	{}
 decoded output	 - 
 logs	[
 	{
-		"from": "0x3129dd4d0454e94fcc98c7880a730038fd325063",
+		"from": "0xd93eb0baf8e6b91c6882d89c5bbf368649140ac4",
 		"topic": "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
 		"event": "OwnershipTransferred",
 		"args": {
@@ -45,18 +27,18 @@ logs	[
 ]
 raw logs	[
   {
-    "address": "0x3129dd4d0454e94fcc98c7880a730038fd325063",
+    "address": "0xd93eb0baf8e6b91c6882d89c5bbf368649140ac4",
     "topics": [
       "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
       "0x0000000000000000000000000000000000000000000000000000000000000000",
       "0x000000000000000000000000b900bf1b510b3e4b917681aa601ffe9ef053390a"
     ],
     "data": "0x",
-    "blockHash": "0x3a083b35989fb041da875593797d0fae026eeed8854461733e012ee2665043d4",
-    "blockNumber": "0x151a3e9",
-    "transactionHash": "0xa098032f99073eee6d70f1c8ca70647ec20027d95923055604f33dd3d3268f34",
-    "transactionIndex": "0x3",
-    "logIndex": "0x9",
+    "blockHash": "0x97cd8b0b170beb74815a0985216ce038cd84b802c75ac69e0c5c48b04f7d5e39",
+    "blockNumber": "0x151d7fa",
+    "transactionHash": "0xced5e016411e2ad5035b207dcf6f08154cb6df671882b0f0225e2fe19b103c31",
+    "transactionIndex": "0x16",
+    "logIndex": "0x3e",
     "removed": false
   }
 ]
