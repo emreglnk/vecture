@@ -24,7 +24,8 @@
             <div class="tabs">
                 <button class="tab-btn active" data-tab="upload">Vectorize Content</button>
                 <button class="tab-btn" data-tab="search">Search Vectors</button>
-                <button class="tab-btn" data-tab="manage">Manage Index</button>
+                <button class="tab-btn" data-tab="rag">LLM Query</button>
+                <button class="tab-btn" data-tab="manage">Index Info</button>
             </div>
 
             <!-- Upload Tab -->
@@ -62,10 +63,28 @@
                 </div>
             </div>
 
+            <!-- RAG Query Tab -->
+            <div id="rag-tab" class="tab-content">
+                <div class="card">
+                    <h2>LLM Query</h2>
+                    <p>Ask questions about your indexed content using AI.</p>
+                    
+                    <form id="rag-form">
+                        <div class="form-group">
+                            <label for="rag-input">Your Question:</label>
+                            <textarea id="rag-input" rows="4" placeholder="Ask a question about your indexed content..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Ask AI</button>
+                    </form>
+                    
+                    <div id="rag-output" class="result hidden"></div>
+                </div>
+            </div>
+
             <!-- Manage Tab -->
             <div id="manage-tab" class="tab-content">
                 <div class="card">
-                    <h2>Index Management</h2>
+                    <h2>Index Info</h2>
                     <div class="stats">
                         <div class="stat-item">
                             <span class="stat-label">Total Vectors:</span>

@@ -16,8 +16,9 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 import re
+import asyncio
 
-from rag_pipeline import get_vector_index
+# from rag_pipeline import get_vector_index
 from openai import OpenAI
 
 # Load environment variables
@@ -31,7 +32,7 @@ os.makedirs('/app/logs', exist_ok=True)
 
 # Configure logging with rotation
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
@@ -44,6 +45,9 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+from rag_pipeline import get_vector_index, load_all_nfts_to_index
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -218,13 +222,56 @@ def sha3_hex(data: bytes) -> str:
     return "0x" + hashlib.sha3_256(data).hexdigest()
 
 def get_embedding(text: str, model: str = "text-embedding-3-small") -> np.ndarray:
-    """Get text embedding from OpenAI"""
+    """Get embedding vector for text using OpenAI API with improved error handling"""
     try:
         response = client.embeddings.create(model=model, input=text)
         return np.array(response.data[0].embedding, dtype="float32")
     except Exception as e:
         logger.error(f"Embedding generation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Embedding generation failed: {str(e)}")
+
+def ensure_index_loaded(vector_index, always_load: bool = False) -> None:
+    """Ensure the vector index is loaded with NFT data"""
+    try:
+        ntotal = getattr(getattr(vector_index, "index", None), "ntotal", 0)
+        if always_load or ntotal == 0:
+            logger.info("Loading NFTs into index (this may take some time)...")
+            load_all_nfts_to_index(vector_index)
+            ntotal = getattr(getattr(vector_index, "index", None), "ntotal", 0)
+            logger.info(f"Index loaded. ntotal={ntotal}")
+        else:
+            logger.info(f"Index already populated. ntotal={ntotal}")
+    except Exception as e:
+        logger.error(f"Failed to ensure index is loaded: {e}")
+        raise HTTPException(status_code=500, detail=f"Index loading failed: {str(e)}")
+
+def search_with_embeddings(vector_index, client_instance: OpenAI, query: str, topk: int = 5) -> List[Dict[str, Any]]:
+    """Search vector index using query embeddings"""
+    try:
+        q_emb = get_embedding(query)
+        hits = vector_index.search(q_emb, k=topk)
+        return hits
+    except Exception as e:
+        logger.error(f"Vector search failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Vector search failed: {str(e)}")
+
+def rag_answer_with_context(client_instance: OpenAI, query: str, context: str, model: str = "gpt-4o-mini") -> str:
+    """Generate RAG answer using OpenAI with improved system prompt"""
+    try:
+        sys_prompt = (
+            "You are a helpful assistant. Answer the user using ONLY the provided context. "
+            "If the answer is not contained in the context, say you don't have enough information. "
+            "Be concise and accurate in your response."
+        )
+        messages = [
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"},
+        ]
+        resp = client_instance.chat.completions.create(model=model, messages=messages, temperature=0.2)
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        logger.error(f"RAG answer generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"RAG answer generation failed: {str(e)}")
 
 # Pydantic models
 class EmbedRequest(BaseModel):
@@ -252,13 +299,26 @@ class UploadAndManifestResponse(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str = Field(..., description="Search query")
-    topk: int = Field(5, ge=1, le=50, description="Number of results to return")
-    min_score: float = Field(0.0, ge=0.0, le=1.0, description="Minimum similarity score")
+    topk: int = Field(10, ge=1, le=50, description="Number of results to return")
+    min_score: float = Field(0.3, ge=0.0, le=1.0, description="Minimum similarity score")
 
 class SearchResponse(BaseModel):
     hits: List[Dict[str, Any]]
     query_embedding_dim: int
     total_results: int
+
+# New models for RAG
+class RagRequest(BaseModel):
+    query: str = Field(..., description="LLM query text")
+    topk: int = Field(5, ge=1, le=50, description="Number of context hits")
+    chat_model: str = Field("gpt-4o-mini", description="OpenAI chat model for RAG")
+
+class RagResponse(BaseModel):
+    answer: str
+    hits: List[Dict[str, Any]]
+    query_embedding_dim: int
+    used_topk: int
+    model: str
 
 class AddIndexRequest(BaseModel):
     tokenId: int = Field(..., description="NFT token ID")
@@ -286,16 +346,13 @@ class FetchUrlResponse(BaseModel):
 # API endpoints
 @app.get("/")
 async def root():
+    # Dinamik olarak kayıtlı yolları app.router.routes üzerinden topla (docs/openapi hariç)
+    exclude = {"/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"}
+    endpoints = sorted({getattr(r, "path", "") for r in getattr(app, "router", app).routes if getattr(r, "path", "") not in exclude})
     return {
         "message": "Vector Record API",
         "version": "1.0.0",
-        "endpoints": [
-            "/embed",
-            "/upload_and_manifest",
-            "/search",
-            "/add_index",
-            "/stats"
-        ]
+        "endpoints": endpoints,
     }
 
 @app.post("/embed", response_model=EmbedResponse)
@@ -395,7 +452,72 @@ async def search_vectors(request: SearchRequest):
         total_results=len(hits)
     )
 
-@app.post("/add_index")
+# Helper to build RAG context from hits
+def build_context_from_hits(hits: List[Dict[str, Any]], max_chars: int = 3000) -> str:
+    """Build context string from search hits with improved text extraction"""
+    # Try common keys to extract textual context; fall back to metadata/json dump
+    parts: List[str] = []
+    for i, h in enumerate(hits):
+        txt = None
+        # Try common text fields first
+        for key in ("text", "content", "chunk_text", "body"):
+            if isinstance(h.get(key), str) and h[key].strip():
+                txt = h[key]
+                break
+        
+        # If no direct text found, try metadata
+        if not txt:
+            meta = h.get("metadata") or {}
+            # Try common metadata text fields
+            for key in ("text", "content", "description", "title"):
+                if isinstance(meta.get(key), str) and meta[key].strip():
+                    txt = meta[key]
+                    break
+        
+        # Last resort: compact JSON line (excluding vector data)
+        if not txt:
+            txt = json.dumps({k: v for k, v in h.items() if k not in ("vector",)}, ensure_ascii=False)
+        
+        parts.append(f"[Doc {i+1}]\n{txt}")
+        
+        # Check character limit
+        if sum(len(p) for p in parts) > max_chars:
+            break
+    
+    return "\n\n".join(parts)
+
+@app.post("/rag", response_model=RagResponse)
+async def rag_endpoint(request: RagRequest):
+    """Run RAG: search FAISS for context and generate LLM answer with improved functionality"""
+    try:
+        # 1) Get vector index and ensure it's loaded
+        vector_index = get_vector_index()
+        ensure_index_loaded(vector_index)
+        
+        # 2) Search using improved search function
+        hits = search_with_embeddings(vector_index, client, request.query, topk=request.topk)
+        
+        # 3) Build context with improved text extraction
+        context = build_context_from_hits(hits)
+        
+        # 4) Generate answer using improved RAG function
+        answer = rag_answer_with_context(client, request.query, context, model=request.chat_model)
+        
+        # 5) Get query embedding for response metadata
+        query_embedding = get_embedding(request.query)
+        
+        return RagResponse(
+            answer=answer,
+            hits=hits,
+            query_embedding_dim=len(query_embedding),
+            used_topk=len(hits),
+            model=request.chat_model
+        )
+    except Exception as e:
+        logger.error(f"RAG failed: {e}")
+        raise HTTPException(status_code=500, detail=f"RAG failed: {str(e)}")
+
+@app.post("/add_index", include_in_schema=False)
 async def add_to_index(request: AddIndexRequest):
     """Add embedding from IPFS to search index"""
     
@@ -427,10 +549,54 @@ async def add_to_index(request: AddIndexRequest):
         logger.error(f"Failed to add to index: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to add to index: {str(e)}")
 
+@app.post("/clear_index")
+async def clear_index():
+    """Clear all vectors from the index without re-instantiating it."""
+    try:
+        # Global index nesnesini al
+        vector_index = get_vector_index()
+        
+        # Nesneyi değiştirmek yerine içeriğini temizle
+        vector_index.clear()
+        
+        return {"message": "Index cleared successfully"}
+    except Exception as e:
+        logger.error(f"Error clearing index: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/stats", response_model=IndexStatsResponse)
 async def get_index_stats():
     """Get vector index statistics"""
     vector_index = get_vector_index()
+    try:
+        import rag_pipeline as rp
+        logger.info(f"/stats diag: get_vector_index id={id(vector_index)}, type={type(vector_index)}, module={getattr(vector_index.__class__, '__module__', None)}")
+        logger.info(f"/stats diag: rp.VECTOR_INDEX id={id(rp.VECTOR_INDEX)}, same={vector_index is rp.VECTOR_INDEX}")
+        ntotal = getattr(getattr(vector_index, "index", None), "ntotal", None)
+        logger.info(f"/stats diag: ntotal={ntotal}, ids_len={len(getattr(vector_index, 'ids', []))}")
+    except Exception as e:
+        logger.error(f"/stats diag failed: {e}")
+    stats = vector_index.get_stats()
+    
+    return IndexStatsResponse(**stats)
+
+@app.get("/stats_diag", include_in_schema=True)
+async def get_index_stats_diag():
+    """Diagnostic info about the vector index instance and FAISS state"""
+    vector_index = get_vector_index()
+    try:
+        import rag_pipeline as rp
+        info = {
+            "get_vector_index_id": id(vector_index),
+            "rp_VECTOR_INDEX_id": id(rp.VECTOR_INDEX),
+            "same_instance": vector_index is rp.VECTOR_INDEX,
+            "ntotal": getattr(getattr(vector_index, "index", None), "ntotal", None),
+            "ids_len": len(getattr(vector_index, 'ids', [])),
+            "ids_sample": getattr(vector_index, 'ids', [])[:5],
+        }
+    except Exception as e:
+        info = {"error": str(e)}
+    return info
     stats = vector_index.get_stats()
     
     return IndexStatsResponse(**stats)
@@ -557,6 +723,35 @@ async def get_error_logs(lines: int = 20):
     except Exception as e:
         logger.error(f"Error reading error logs: {e}")
         raise HTTPException(status_code=500, detail=f"Error reading error logs: {str(e)}")
+
+# Uygulama başlangıcında (server process içinde) otomatik yükleme
+@app.on_event("startup")
+async def startup_autoload_nfts():
+    try:
+        rpc_url = os.getenv("RPC_URL")
+        logger.debug(f"Startup auto-load check: RPC_URL={rpc_url}")
+        if rpc_url and "your-infura-project-id" not in rpc_url:
+            vector_index = get_vector_index()
+            # Duplicate yüklemeyi önlemek için kontrol et
+            ntotal = getattr(getattr(vector_index, "index", None), "ntotal", 0)
+            if ntotal == 0:
+                logger.info("Startup: Auto-loading NFTs to index (server process)...")
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, load_all_nfts_to_index, vector_index)
+                logger.info(f"Startup: Auto-loading complete. Total vectors: {vector_index.index.ntotal}")
+            else:
+                logger.info(f"Startup: Index already populated (ntotal={ntotal}), skipping auto-load.")
+        else:
+            logger.info("Startup: Auto-loading skipped due to RPC_URL config.")
+        # Route diagnostics
+        try:
+            route_paths = [getattr(r, 'path', None) for r in getattr(app.router, 'routes', [])]
+            logger.info(f"Startup: Registered routes count={len(route_paths)} paths={route_paths}")
+            logger.info(f"Startup: Has /stats_diag? {'/stats_diag' in route_paths}")
+        except Exception as e:
+            logger.error(f"Startup: Route introspection failed: {e}")
+    except Exception as e:
+        logger.error(f"Startup: Auto-loading failed: {e}")
 
 if __name__ == "__main__":
     import uvicorn

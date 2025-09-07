@@ -55,6 +55,12 @@ class VectorMVPApp {
             this.handleSearch();
         });
         
+        // RAG form
+        document.getElementById('rag-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleRAG();
+        });
+        
         // Management actions
         document.getElementById('refresh-stats').addEventListener('click', () => {
             this.loadIndexStats();
@@ -83,6 +89,10 @@ class VectorMVPApp {
         // Load data for specific tabs
         if (tabName === 'manage') {
             this.loadIndexStats();
+        } else if (tabName === 'rag') {
+            // Clear form when switching to RAG tab
+            document.getElementById('rag-form').reset();
+            document.getElementById('rag-output').classList.add('hidden');
         }
     }
     
@@ -294,53 +304,363 @@ class VectorMVPApp {
             const topKInput = document.getElementById('top-k');
             const resultsDiv = document.getElementById('search-results');
             
-            // Validate inputs
-            const query = APIUtils.validateSearchQuery(searchInput.value);
+            const query = searchInput.value.trim();
             const topK = parseInt(topKInput.value) || 5;
+            
+            if (!query) {
+                throw new Error('Please enter a search query');
+            }
             
             this.showLoading('Searching vectors...');
             
-            // Perform search
-            const searchResults = await apiClient.searchVectors(query, topK);
-            const formattedResults = APIUtils.formatSearchResults(searchResults);
+            const response = await fetch('http://localhost:8000/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: query,
+                    topk: topK,
+                    min_score: 0.0
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Search failed: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
             
             // Display results
-            if (formattedResults.length === 0) {
-                resultsDiv.innerHTML = `
-                    <div class="result">
-                        <p>No similar vectors found for your query.</p>
+            if (data.hits && data.hits.length > 0) {
+                let html = `<h3>Found ${data.hits.length} results:</h3>`;
+                data.hits.forEach((hit, index) => {
+                    const similarity = (hit.score * 100).toFixed(1);
+                    html += `
+                        <div class="search-result">
+                            <div class="result-header">
+                                <span class="result-rank">#${hit.rank}</span>
+                                <span class="result-score">${similarity}% match</span>
+                            </div>
+                            <div class="result-content">
+                                <strong>Token ID:</strong> ${hit.tokenId}<br>
+                                <strong>Chunk ID:</strong> ${hit.chunkId}<br>
+                                ${hit.metadata ? `<strong>Title:</strong> ${hit.metadata.title || 'N/A'}<br>` : ''}
+                                ${hit.metadata && hit.metadata.source_url ? `<strong>Source:</strong> <a href="${hit.metadata.source_url}" target="_blank">${hit.metadata.source_url}</a>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                resultsDiv.innerHTML = html;
+            } else {
+                resultsDiv.innerHTML = '<p>No results found. Try a different query.</p>';
+            }
+            
+            resultsDiv.classList.remove('hidden');
+            
+        } catch (error) {
+            this.showNotification(error.message, 'error');
+            console.error('Search error:', error);
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    async syncAllNFTs() {
+        try {
+            if (!walletManager.isWalletConnected()) {
+                throw new Error('Please connect your wallet first');
+            }
+            
+            const resultDiv = document.getElementById('add-index-result');
+            this.showLoading('Scanning contract for all NFTs...');
+            
+            // Get contract instance
+            const contract = walletManager.getContract();
+            if (!contract) {
+                throw new Error('Contract not available');
+            }
+            
+            // Get total supply of NFTs
+            let totalSupply;
+            try {
+                totalSupply = await contract.totalSupply();
+                totalSupply = totalSupply.toNumber();
+            } catch (e) {
+                // If totalSupply doesn't exist, try to get the next token ID
+                try {
+                    const nextTokenId = await contract.nextTokenId();
+                    totalSupply = nextTokenId.toNumber();
+                } catch (e2) {
+                    throw new Error('Cannot determine total NFT count from contract');
+                }
+            }
+            
+            if (totalSupply === 0) {
+                resultDiv.innerHTML = `
+                    <div class="info-message">
+                        <h3>ℹ️ No NFTs Found</h3>
+                        <p>No NFTs have been minted on this contract yet.</p>
                     </div>
                 `;
-            } else {
-                const resultsHTML = formattedResults.map(result => `
-                    <div class="search-result">
-                        <h4>Result ${result.id + 1}</h4>
-                        <div class="score">Similarity Score: ${(result.score * 100).toFixed(2)}%</div>
-                        <div class="content">${result.text}</div>
-                        ${Object.keys(result.metadata).length > 0 ? 
-                            `<div class="metadata">Metadata: ${APIUtils.formatMetadata(result.metadata)}</div>` : 
-                            ''
-                        }
+                resultDiv.classList.remove('hidden');
+                return;
+            }
+            
+            let successCount = 0;
+            let errorCount = 0;
+            const errors = [];
+            
+            // Process each NFT
+            for (let tokenId = 1; tokenId < totalSupply; tokenId++) {
+                try {
+                    this.showLoading(`Processing NFT ${tokenId}/${totalSupply - 1}...`);
+                    
+                    // Get token URI and metadata
+                    const tokenURI = await contract.tokenURI(tokenId);
+                    
+                    // Fetch metadata from IPFS
+                    const metadataResponse = await fetch(tokenURI.replace('ipfs://', 'https://plum-peculiar-pheasant-309.mypinata.cloud/ipfs/'));
+                    const metadata = await metadataResponse.json();
+                    
+                    // Extract embedding URI from metadata
+                    const embeddingURI = metadata.embedding?.file?.uri;
+                    if (!embeddingURI) {
+                        errors.push(`Token ${tokenId}: No embedding URI found in metadata`);
+                        errorCount++;
+                        continue;
+                    }
+                    
+                    // Add to index via backend
+                    const response = await fetch('http://localhost:8000/add_index', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            tokenId: tokenId,
+                            embedding_uri: embeddingURI,
+                            metadata: {
+                                title: metadata.content?.title || `NFT #${tokenId}`,
+                                source_url: metadata.content?.source_refs?.[0]?.uri,
+                                created_at: metadata.content?.created_at
+                            }
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        const errorData = await response.json().catch(() => ({}));
+                        errors.push(`Token ${tokenId}: ${errorData.detail || 'Add failed'}`);
+                        errorCount++;
+                    }
+                    
+                } catch (error) {
+                    errors.push(`Token ${tokenId}: ${error.message}`);
+                    errorCount++;
+                }
+            }
+            
+            // Display results
+            let resultHTML = `
+                <div class="sync-results">
+                    <h3>🔄 Sync Complete</h3>
+                    <div class="stats">
+                        <p><strong>Total NFTs Found:</strong> ${totalSupply - 1}</p>
+                        <p><strong>Successfully Added:</strong> ${successCount}</p>
+                        <p><strong>Errors:</strong> ${errorCount}</p>
                     </div>
-                `).join('');
-                
-                resultsDiv.innerHTML = `
-                    <h3>Search Results (${formattedResults.length} found)</h3>
-                    ${resultsHTML}
+            `;
+            
+            if (errors.length > 0 && errors.length <= 5) {
+                resultHTML += `
+                    <div class="error-details">
+                        <h4>Errors:</h4>
+                        <ul>
+                            ${errors.map(error => `<li>${error}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            } else if (errors.length > 5) {
+                resultHTML += `
+                    <div class="error-details">
+                        <h4>Errors (showing first 5):</h4>
+                        <ul>
+                            ${errors.slice(0, 5).map(error => `<li>${error}</li>`).join('')}
+                        </ul>
+                        <p>... and ${errors.length - 5} more errors</p>
+                    </div>
                 `;
             }
             
-            this.showNotification(`Found ${formattedResults.length} similar vectors`, 'success');
+            resultHTML += '</div>';
+            resultDiv.innerHTML = resultHTML;
+            resultDiv.classList.remove('hidden');
+            
+            // Refresh index stats
+            this.loadIndexStats();
+            
+            this.showNotification(`Sync complete: ${successCount} NFTs added, ${errorCount} errors`, successCount > 0 ? 'success' : 'warning');
             
         } catch (error) {
-            const resultsDiv = document.getElementById('search-results');
-            resultsDiv.innerHTML = `
-                <div class="result error">
-                    <h4>Search Failed</h4>
-                    <p>${APIUtils.formatError(error)}</p>
+            const resultDiv = document.getElementById('add-index-result');
+            resultDiv.innerHTML = `
+                <div class="error-message">
+                    <h3>❌ Sync Failed</h3>
+                    <p>${error.message}</p>
                 </div>
             `;
-            this.showNotification(APIUtils.formatError(error), 'error');
+            resultDiv.classList.remove('hidden');
+            
+            this.showNotification(error.message, 'error');
+            console.error('Sync all NFTs error:', error);
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    async handleRAG() {
+        try {
+            const ragInput = document.getElementById('rag-input');
+            const ragOutput = document.getElementById('rag-output');
+            
+            const query = ragInput.value.trim();
+            if (!query) {
+                throw new Error('Please enter a question');
+            }
+            
+            this.showLoading('Processing your question...');
+            
+            const response = await fetch('http://localhost:8000/rag', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: query,
+                    topk: 5
+                })
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Server error: ${errorText}`);
+            }
+            
+            const result = await response.json();
+            
+            ragOutput.innerHTML = `
+                <div class="rag-result">
+                    <h3>AI Response:</h3>
+                    <div class="answer">${result.answer}</div>
+                    <div class="context-info">
+                        <small>Based on ${result.context_sources || 'multiple'} relevant sources</small>
+                    </div>
+                </div>
+            `;
+            ragOutput.classList.remove('hidden');
+            
+        } catch (error) {
+            console.error('RAG error:', error);
+            const ragOutput = document.getElementById('rag-output');
+            ragOutput.innerHTML = `
+                <div class="error-message">
+                    <h3>❌ Error</h3>
+                    <p>${error.message}</p>
+                </div>
+            `;
+            ragOutput.classList.remove('hidden');
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    async handleAddIndex() {
+        try {
+            const tokenIdInput = document.getElementById('token-id-input');
+            const resultDiv = document.getElementById('add-index-result');
+            
+            const tokenId = parseInt(tokenIdInput.value);
+            
+            if (!tokenId || tokenId < 1) {
+                throw new Error('Please enter a valid Token ID');
+            }
+            
+            if (!walletManager.isWalletConnected()) {
+                throw new Error('Please connect your wallet first');
+            }
+            
+            this.showLoading('Adding NFT to index...');
+            
+            // Get contract instance and fetch metadata
+            const contract = walletManager.getContract();
+            const tokenURI = await contract.tokenURI(tokenId);
+            
+            // Fetch metadata from IPFS
+            const metadataResponse = await fetch(tokenURI.replace('ipfs://', 'https://plum-peculiar-pheasant-309.mypinata.cloud/ipfs/'));
+            const metadata = await metadataResponse.json();
+            
+            // Extract embedding URI
+            const embeddingURI = metadata.embedding?.file?.uri;
+            if (!embeddingURI) {
+                throw new Error('No embedding URI found in NFT metadata');
+            }
+            
+            const response = await fetch('http://localhost:8000/add_index', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    tokenId: tokenId,
+                    embedding_uri: embeddingURI,
+                    metadata: {
+                        title: metadata.content?.title || `NFT #${tokenId}`,
+                        source_url: metadata.content?.source_refs?.[0]?.uri,
+                        created_at: metadata.content?.created_at
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `Add to index failed: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            // Display success result
+            resultDiv.innerHTML = `
+                <div class="success-message">
+                    <h3>✅ Successfully Added to Index</h3>
+                    <p><strong>Token ID:</strong> ${tokenId}</p>
+                    <p><strong>Title:</strong> ${metadata.content?.title || 'N/A'}</p>
+                    <p><strong>Status:</strong> ${data.message || 'Added successfully'}</p>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+            
+            // Clear form
+            document.getElementById('add-index-form').reset();
+            
+            // Refresh index stats
+            this.loadIndexStats();
+            
+            this.showNotification('NFT successfully added to search index!', 'success');
+            
+        } catch (error) {
+            const resultDiv = document.getElementById('add-index-result');
+            resultDiv.innerHTML = `
+                <div class="error-message">
+                    <h3>❌ Error</h3>
+                    <p>${error.message}</p>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+            
+            this.showNotification(error.message, 'error');
+            console.error('Add to index error:', error);
         } finally {
             this.hideLoading();
         }
@@ -348,11 +668,25 @@ class VectorMVPApp {
     
     async loadIndexStats() {
         try {
-            // Set default values for now since stats endpoint may not be implemented
-            document.getElementById('total-vectors').textContent = '0';
-            document.getElementById('index-size').textContent = '0 MB';
+            const response = await fetch('http://localhost:8000/stats');
+            if (!response.ok) {
+                throw new Error(`Failed to fetch stats: ${response.statusText}`);
+            }
+            
+            const stats = await response.json();
+            document.getElementById('total-vectors').textContent = stats.total_vectors || '0';
+            
+            // Calculate approximate index size (vectors * dimension * 4 bytes per float)
+            const sizeBytes = (stats.total_vectors || 0) * (stats.dimension || 1536) * 4;
+            const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2);
+            document.getElementById('index-size').textContent = `${sizeMB} MB`;
+            
+            console.log('Index stats loaded:', stats);
         } catch (error) {
             console.error('Failed to load index stats:', error);
+            // Set default values on error
+            document.getElementById('total-vectors').textContent = 'Error';
+            document.getElementById('index-size').textContent = 'Error';
         }
     }
     
