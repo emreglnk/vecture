@@ -1,171 +1,135 @@
-# VECTURE — Vector Knowledge Platform
+# Vecture
 
-Web3 tabanlı içerik vektörleştirme ve arama platformu. İçerikleri doğrulanabilir vektör varlıklarına dönüştürür.
+**Vecture** is an open protocol that turns content (articles, blogs, code, etc.) into **vector embeddings** stored on IPFS, while registering the identity on-chain as an **NFT**.  
+The goal: make knowledge **verifiable on-chain**, provide **transparent sources for LLM/RAG systems**, and ensure **creators get paid**.
 
-## Özellikler
+---
 
-- **Vektör Dönüştürme**: Metinleri OpenAI embedding modeli ile vektörlere çevirir
-- **Semantik Arama**: FAISS ile hızlı benzerlik araması
-- **IPFS Depolama**: Merkezi olmayan içerik saklama
-- **NFT Entegrasyonu**: Blockchain tabanlı sahiplik kaydı
-- **RESTful API**: FastAPI ile backend hizmetleri
-- **Web Arayüzü**: Basit HTML/JS frontend
+## 🚀 Key Features
 
-## Teknik Mimari
+- **Vector Minting:** Store content as embedding + manifest on IPFS, mint as NFT on-chain.  
+- **Two-Level Duplication Guard:**  
+  - `contentHash` → blocks exact duplicates  
+  - `vectorHash` → blocks semantic duplicates (paraphrases, translations)  
+- **Semantic Search + RAG:** FAISS/HNSW-based search + LLM answers with sources.  
+- **Future Economy:** Query-based micro-fees automatically split among Indexers, Creators, and the Protocol.
 
-### Sistem Bileşenleri
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│    Frontend     │    │     Backend     │    │   Blockchain    │
-│   (HTML/JS)     │◄──►│   (FastAPI)     │◄──►│   (Ethereum)    │
-│                 │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐
-                       │      IPFS       │
-                       │ (Web3.Storage)  │
-                       └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐
-                       │     FAISS       │
-                       │ (Vector Index)  │
-                       └─────────────────┘
-```
+---
 
-### Veri Akışı
-```
-Metin Girişi → OpenAI Embedding → FAISS Index → Arama Sonuçları
-     │              │                  ▲             │
-     ▼              ▼                  │             ▼
-  IPFS Hash → Blockchain NFT ──────────┘      Kullanıcı Arayüzü
-```
+## 📦 Architecture Layers
 
-### İşleyiş Adımları
-1. **Metin Yükleme**: Kullanıcı metin içeriği yükler
-2. **Embedding Üretimi**: OpenAI API ile vektör oluşturulur
-3. **IPFS Depolama**: Orijinal metin IPFS'e kaydedilir
-4. **Vektör İndeksleme**: FAISS index'ine eklenir
-5. **NFT Minting**: Opsiyonel blockchain kaydı
-6. **Arama**: Benzer içerikler vektör benzerliği ile bulunur
+1. **Client UI**  
+   - Wallet connect, paste link/text, one-click mint  
 
-## 📁 Project Structure
+2. **Node Service**  
+   - Generates embeddings  
+   - Computes `contentHash` + `vectorHash`  
+   - Uploads manifest + embeddings to IPFS  
 
-```
-vector-mvp/
-├── contracts/          # Smart contracts (Solidity)
-│   ├── VectorRecordNFT.sol
-│   ├── hardhat.config.ts
-│   ├── package.json
-│   └── scripts/
-├── backend/           # API server (Python/FastAPI)
-│   ├── app.py
-│   ├── rag_pipeline.py
-│   └── requirements.txt
-├── frontend/          # Web interface (Vanilla JS)
-│   ├── index.html
-│   └── src/
-├── cli/              # Command-line tool (Python)
-│   ├── vector_uploader.py
-│   └── requirements.txt
-└── README.md
-```
+3. **Blockchain Layer**  
+   - `VectorRecordNFT` contract  
+   - Stores manifestCID and hash references  
 
-## Kurulum
+4. **Indexer & RAG**  
+   - Adds embeddings to ANN (FAISS/HNSW)  
+   - Processes queries and returns answers via LLM + sources  
 
-### Gereksinimler
-- Python 3.8+
-- Node.js 16+ (smart contracts için)
-- OpenAI API key
-- Web3.Storage API key
+5. **(Future) Payment Layer**  
+   - `payQuery` mechanism  
+   - Fee split: %α indexer, %β creator, %γ protocol  
 
-### Hızlı Başlangıç
+6. **(Future) Auto-Onboarding**  
+   - Wikipedia / Medium / GitHub auto-mint  
+   - Creators can later verify and claim ownership  
 
-```bash
-# Backend
-cd backend
-pip install -r requirements.txt
-cp .env.example .env  # API keylerini düzenle
-python app.py
+---
 
-# Frontend
-cd frontend
-python -m http.server 3000
-```
+## 🔑 What’s in the MVP?
 
-## Kullanım
+- Wallet connect + content minting  
+- IPFS upload (manifest + embeddings)  
+- On-chain NFT registration  
+- Basic indexing + FAISS search  
+- RAG for attributed answers  
 
-### Web Arayüzü
-1. `http://localhost:3000` - Ana sayfa
-2. `app.html` - Uygulama arayüzü
-3. MetaMask bağlantısı
-4. Metin yükleme ve arama
+---
 
-### API Endpoints
-- `POST /generate-embedding` - Metin vektörü oluştur
-- `POST /upload-ipfs` - IPFS'e yükle
-- `POST /add-vector` - Vektör index'ine ekle
-- `POST /search` - Benzer vektörleri ara
-- `GET /index/stats` - İstatistikler
+## 🛠️ Next Stages
 
-### CLI Kullanımı
-```bash
-python cli/vector_uploader.py upload document.txt
-python cli/vector_uploader.py search "arama terimi"
-```
+- **Stage 2:** Payment flow (`payQuery`) & micro-royalties  
+- **Stage 3:** Multi-indexer, sharding, SLAs & metrics  
+- **Stage 4:** Auto-onboarding (Wikipedia/Medium/GitHub) + creator claims  
+- **Stage 5:** Domain-specific embedding models (e.g. legal, health), automated citations  
 
-## Konfigürasyon
+---
 
-### Backend (.env)
-```env
-OPENAI_API_KEY=your_key
-WEB3_STORAGE_TOKEN=your_token
-ETHEREUM_RPC_URL=https://sepolia.infura.io/v3/your_key
-CONTRACT_ADDRESS=0x...
-```
+## 🌍 Vision
 
-## Teknik Detaylar
+**Vecture** aims to become a **verifiable, sustainable alternative to web search for LLMs**, while building a global knowledge economy where **creators are rewarded fairly**.
 
-### Embedding Süreci
-```python
-# OpenAI API ile vektör oluşturma
-embedding = openai.Embedding.create(
-    input=text,
-    model="text-embedding-3-small"
-)
-vector = embedding['data'][0]['embedding']
-```
+---
 
-### FAISS Index Yönetimi
-```python
-# Vektör ekleme
-index.add(np.array([vector]).astype('float32'))
+## 🖼️ High-Level Flow
 
-# Benzerlik araması
-scores, indices = index.search(query_vector, k=5)
-```
+```mermaid
+flowchart LR
+  classDef mvp fill:#0b5,stroke:#083,color:#fff
+  classDef fut fill:#1b2e4d,stroke:#88b,color:#dfe
+  classDef sys fill:#0e1420,stroke:#3a5678,color:#e7f
 
-### IPFS Entegrasyonu
-```python
-# Web3.Storage ile yükleme
-response = requests.post(
-    'https://api.web3.storage/upload',
-    headers={'Authorization': f'Bearer {token}'},
-    files={'file': content}
-)
-```
+  subgraph UI[Client UI • Wallet]
+    U[User + Wallet]:::sys
+    M[Mint Form]:::sys
+  end
 
-## Proje Yapısı
-```
-vector-mvp/
-├── backend/           # FastAPI backend
-│   ├── app.py        # Ana API server
-│   └── rag_pipeline.py # Vektör işleme
-├── frontend/         # HTML/JS arayüz
-├── contracts/        # Solidity contracts
-└── cli/             # Python CLI tool
-```
+  subgraph NODE[Node Service]
+    EMB[Embedder]:::sys
+    HASH[contentHash + vectorHash]:::sys
+    IPFS[IPFS Upload]:::sys
+  end
 
-## Lisans
-MIT License
+  subgraph CHAIN[Blockchain]
+    NFT[VectorRecordNFT]:::sys
+  end
+
+  subgraph SEARCH[Indexer & RAG]
+    IDX[Indexer Node]:::sys
+    ANN[ANN Index]:::sys
+    RAG[LLM Answer + Sources]:::sys
+  end
+
+  %% MVP Flow
+  U -->|connect| M:::mvp
+  M -->|send content| EMB:::mvp
+  EMB -->|embedding| HASH:::mvp
+  HASH --> IPFS:::mvp
+  IPFS -->|manifestCID| M:::mvp
+  M -->|mint| NFT:::mvp
+  IPFS --> IDX:::mvp
+  IDX --> ANN:::mvp
+  U -->|query| ANN:::mvp
+  ANN --> RAG:::mvp
+  RAG -->|answer + sources| U:::mvp
+
+  %% Future Flow
+  HASH -. preCheck near-dup .-> IDX:::fut
+  U -. payQuery .-> NFT:::fut
+
+  subgraph PAY[Payments Future]
+    SPLIT[Fee Split\nIndexer • Creator • Protocol]:::sys
+  end
+  NFT -. distribute fees .-> SPLIT:::fut
+
+  subgraph AUTO[Auto-Onboarding Future]
+    WIKI[Wikipedia]:::sys
+    MED[Medium]:::sys
+    GIT[GitHub]:::sys
+    VER[Creator Verification]:::sys
+  end
+  WIKI -. auto-mint .-> IPFS:::fut
+  MED  -. auto-mint .-> IPFS:::fut
+  GIT  -. auto-mint .-> IPFS:::fut
+  VER  -. claim ownership .-> NFT:::fut
+
+  class U,M,EMB,HASH,IPFS,NFT,IDX,ANN,RAG mvp
+  class SPLIT,WIKI,MED,GIT,VER fut
